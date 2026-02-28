@@ -167,35 +167,39 @@ body {
   transform: translateY(1px);
 }
 
-.pending-page {
-  position: relative;
+.status-page {
+  position: fixed;
+  inset: 0;
   overflow: hidden;
-  width: min(100%, 393px);
-  margin: 0 auto;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   background: #ffffff;
 }
 
-.pending-page::before {
+.status-page::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background: url("assets/payment-pending-gradient.svg") top center / 100% 100% no-repeat;
+  inset: -2px;
+  background: url("assets/payment-pending-gradient.svg") center / cover no-repeat;
   transform: translateY(100%);
+  will-change: transform;
   z-index: 1;
   pointer-events: none;
 }
 
-.pending-page.is-animating::before {
+.status-page.is-animating::before {
   animation: pending-gradient-rise 1000ms ease-out forwards;
 }
 
-.pending-artboard {
+.status-artboard {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: top center;
   z-index: 2;
   pointer-events: none;
 }

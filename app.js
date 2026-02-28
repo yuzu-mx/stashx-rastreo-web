@@ -1,6 +1,8 @@
 const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
 const pendingArtboard = document.querySelector(".pending-artboard");
+const localPreparingScreen = document.getElementById("localPreparingScreen");
+const localPreparingArtboard = document.querySelector(".local-preparing-artboard");
 const trackingForm = document.getElementById("trackingForm");
 const phoneInput = document.getElementById("phoneInput");
 const orderInput = document.getElementById("orderInput");
@@ -13,6 +15,8 @@ let phoneDigits = "";
 let orderDigits = "";
 let lastToast = { message: "", time: 0 };
 let isSubmitting = false;
+
+const statusScreens = [pendingScreen, localPreparingScreen].filter(Boolean);
 
 function formatPhone(digits) {
   if (digits.length <= 2) return digits;
@@ -109,20 +113,44 @@ function validateOrderWithToast() {
   return true;
 }
 
-function showPendingScreen() {
-  if (pendingArtboard) {
-    const baseSrc =
-      pendingArtboard.dataset.baseSrc || pendingArtboard.getAttribute("src").split("?")[0];
-    pendingArtboard.dataset.baseSrc = baseSrc;
-    pendingArtboard.setAttribute("src", `${baseSrc}?v=${Date.now()}`);
-  }
+function refreshArtboardAnimation(artboard) {
+  if (!artboard) return;
 
+  const currentSrc = artboard.getAttribute("src") || "";
+  const baseSrc = artboard.dataset.baseSrc || currentSrc.split("?")[0];
+  artboard.dataset.baseSrc = baseSrc;
+  artboard.setAttribute("src", `${baseSrc}?v=${Date.now()}`);
+}
+
+function showStatusScreen(screen, artboard) {
+  if (!screen) return;
+
+  refreshArtboardAnimation(artboard);
   lookupScreen.hidden = true;
-  pendingScreen.hidden = false;
-  pendingScreen.classList.remove("is-animating");
-  void pendingScreen.offsetWidth;
-  pendingScreen.classList.add("is-animating");
+
+  statusScreens.forEach((statusScreen) => {
+    if (!statusScreen || statusScreen === screen) return;
+    statusScreen.hidden = true;
+    statusScreen.classList.remove("is-animating");
+  });
+
+  screen.hidden = false;
+  screen.classList.remove("is-animating");
+  void screen.offsetWidth;
+  screen.classList.add("is-animating");
   window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function showPendingScreen() {
+  showStatusScreen(pendingScreen, pendingArtboard);
+}
+
+function showLocalPreparingScreen() {
+  showStatusScreen(localPreparingScreen, localPreparingArtboard);
+}
+
+function hasLocalTag(tags) {
+  return String(tags || "").toLowerCase().includes("local");
 }
 
 async function lookupOrder(payload) {
@@ -220,6 +248,12 @@ trackingForm.addEventListener("submit", async (event) => {
     const financialStatus = String(result.order.financial_status || "").toLowerCase();
     if (financialStatus !== "paid") {
       showPendingScreen();
+      return;
+    }
+
+    const fulfillmentStatus = String(result.order.fulfillment_status || "").toLowerCase();
+    if (hasLocalTag(result.order.tags) && fulfillmentStatus !== "fulfilled") {
+      showLocalPreparingScreen();
       return;
     }
 

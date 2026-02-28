@@ -253,7 +253,7 @@ function mapGraphQlFulfillment(fulfillment) {
 
   return {
     status: String(fulfillment?.status || "").toLowerCase().trim(),
-    shipment_status: String(fulfillment?.shipmentStatus || "").toLowerCase().trim(),
+    shipment_status: "",
     created_at: String(fulfillment?.createdAt || ""),
     updated_at: String(fulfillment?.updatedAt || fulfillment?.createdAt || ""),
     trackingInfo,
@@ -340,7 +340,6 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
         fulfillments {
             id
             status
-            shipmentStatus
             createdAt
             updatedAt
             trackingInfo {
@@ -396,7 +395,6 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
           fulfillments {
               id
               status
-              shipmentStatus
               createdAt
               updatedAt
               trackingInfo {

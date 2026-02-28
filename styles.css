@@ -207,7 +207,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 84px 30px calc(28px + env(safe-area-inset-bottom));
+  padding: 60px 30px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
 }

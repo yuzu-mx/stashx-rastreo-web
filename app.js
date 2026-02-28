@@ -1,5 +1,6 @@
 const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
+const pendingArtboard = document.querySelector(".pending-artboard");
 const trackingForm = document.getElementById("trackingForm");
 const phoneInput = document.getElementById("phoneInput");
 const orderInput = document.getElementById("orderInput");
@@ -109,6 +110,13 @@ function validateOrderWithToast() {
 }
 
 function showPendingScreen() {
+  if (pendingArtboard) {
+    const baseSrc =
+      pendingArtboard.dataset.baseSrc || pendingArtboard.getAttribute("src").split("?")[0];
+    pendingArtboard.dataset.baseSrc = baseSrc;
+    pendingArtboard.setAttribute("src", `${baseSrc}?v=${Date.now()}`);
+  }
+
   lookupScreen.hidden = true;
   pendingScreen.hidden = false;
   pendingScreen.classList.remove("is-animating");

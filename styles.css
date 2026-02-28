@@ -200,22 +200,6 @@ body {
   pointer-events: none;
 }
 
-.pending-top-loader-fill {
-  position: absolute;
-  top: 7.63%;
-  left: 8.91%;
-  width: 0.9%;
-  height: 1.17%;
-  border-radius: 999px;
-  background: #f65508;
-  z-index: 3;
-  pointer-events: none;
-}
-
-.pending-page.is-animating .pending-top-loader-fill {
-  animation: pending-top-loader-grow 1000ms ease-out forwards;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -257,15 +241,6 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes pending-top-loader-grow {
-  from {
-    width: 0.9%;
-  }
-  to {
-    width: 3.0%;
   }
 }
 

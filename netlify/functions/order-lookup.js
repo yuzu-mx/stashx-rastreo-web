@@ -2,6 +2,13 @@ import { Pool } from "pg";
 
 const REQUIRED_ENV = ["PGHOST", "PGDATABASE", "PGUSER", "PGPASSWORD"];
 const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || "latest";
+const SHOPIFY_DOMAIN_ENV_KEYS = [
+  "SHOPIFY_SHOP_DOMAIN",
+  "SHOPIFY_STORE_DOMAIN",
+  "SHOPIFY_DOMAIN",
+  "SHOPIFY_STORE_URL",
+];
+const SHOPIFY_TOKEN_ENV_KEYS = ["SHOPIFY_API_KEY", "SHOPIFY_ACCESS_TOKEN", "SHOPIFY_ADMIN_API_TOKEN"];
 
 const pool = new Pool({
   host: process.env.PGHOST,
@@ -44,6 +51,22 @@ function normalizeShopDomain(value) {
     .split("/")[0];
 }
 
+function getShopifyShopDomain() {
+  for (const key of SHOPIFY_DOMAIN_ENV_KEYS) {
+    const domain = normalizeShopDomain(process.env[key]);
+    if (domain) return domain;
+  }
+  return "";
+}
+
+function getShopifyAccessToken() {
+  for (const key of SHOPIFY_TOKEN_ENV_KEYS) {
+    const token = String(process.env[key] || "").trim();
+    if (token) return token;
+  }
+  return "";
+}
+
 function normalizeTrackingUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -68,6 +91,15 @@ function toTrackingTokens(value) {
     .split(/[,\s;/|]+/)
     .map((token) => normalizeTrackingToken(token))
     .filter(Boolean);
+}
+
+function pickPrimaryTrackingNumber(fulfillment) {
+  const direct = String(fulfillment?.tracking_number || "").trim();
+  if (direct) return direct;
+  if (Array.isArray(fulfillment?.tracking_numbers) && fulfillment.tracking_numbers.length > 0) {
+    return String(fulfillment.tracking_numbers[0] || "").trim();
+  }
+  return "";
 }
 
 function parseShopifyOrderId(value) {
@@ -129,29 +161,51 @@ const LOOKUP_QUERY = `
 `;
 
 async function fetchOrderFulfillmentsFromShopify(shopifyOrderId) {
-  const shopDomain = normalizeShopDomain(process.env.SHOPIFY_SHOP_DOMAIN);
-  const accessToken = String(
-    process.env.SHOPIFY_API_KEY || process.env.SHOPIFY_ACCESS_TOKEN || ""
-  ).trim();
+  const shopDomain = getShopifyShopDomain();
+  const accessToken = getShopifyAccessToken();
   if (!shopDomain || !accessToken || !shopifyOrderId) {
-    return [];
+    return {
+      fulfillments: [],
+      reason: "missing_shopify_config_or_order_id",
+    };
   }
 
-  const endpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}/fulfillments.json?limit=250`;
-  const response = await fetch(endpoint, {
+  const commonHeaders = {
+    "X-Shopify-Access-Token": accessToken,
+    "Content-Type": "application/json",
+  };
+
+  const directFulfillmentsEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}/fulfillments.json?limit=250`;
+  const directResponse = await fetch(directFulfillmentsEndpoint, {
     method: "GET",
-    headers: {
-      "X-Shopify-Access-Token": accessToken,
-      "Content-Type": "application/json",
-    },
+    headers: commonHeaders,
   });
 
-  if (!response.ok) {
-    throw new Error(`Shopify fulfillments lookup failed (${response.status})`);
+  if (directResponse.ok) {
+    const payload = await directResponse.json().catch(() => ({}));
+    const fulfillments = Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
+    if (fulfillments.length > 0) {
+      return { fulfillments, reason: "fulfillments_endpoint" };
+    }
   }
 
-  const payload = await response.json().catch(() => ({}));
-  return Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
+  const orderEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}.json?fields=id,fulfillments`;
+  const orderResponse = await fetch(orderEndpoint, {
+    method: "GET",
+    headers: commonHeaders,
+  });
+
+  if (!orderResponse.ok) {
+    const statusSummary = `fulfillments:${directResponse.status};order:${orderResponse.status}`;
+    throw new Error(`Shopify lookup failed (${statusSummary})`);
+  }
+
+  const orderPayload = await orderResponse.json().catch(() => ({}));
+  const fulfillments = Array.isArray(orderPayload?.order?.fulfillments) ? orderPayload.order.fulfillments : [];
+  return {
+    fulfillments,
+    reason: "order_endpoint",
+  };
 }
 
 function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
@@ -159,21 +213,26 @@ function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
 
   const normalized = fulfillments
     .map((fulfillment) => {
+      const primaryTrackingNumber = pickPrimaryTrackingNumber(fulfillment);
       const tokens = new Set([
-        ...toTrackingTokens(fulfillment?.tracking_number),
+        ...toTrackingTokens(primaryTrackingNumber),
         ...(Array.isArray(fulfillment?.tracking_numbers)
           ? fulfillment.tracking_numbers.flatMap((value) => toTrackingTokens(value))
           : []),
       ]);
 
-      const trackingUrl = normalizeTrackingUrl(
+      const rawTrackingUrl =
         fulfillment?.tracking_url ||
-          (Array.isArray(fulfillment?.tracking_urls) ? fulfillment.tracking_urls[0] : "")
-      );
+        (Array.isArray(fulfillment?.tracking_urls) ? fulfillment.tracking_urls[0] : "");
+
+      const trackingUrl = normalizeTrackingUrl(rawTrackingUrl);
+      const status = String(fulfillment?.status || fulfillment?.shipment_status || "")
+        .toLowerCase()
+        .trim();
 
       return {
         fulfillment,
-        status: String(fulfillment?.status || "").toLowerCase(),
+        status,
         tokens: Array.from(tokens),
         trackingUrl,
       };
@@ -186,15 +245,24 @@ function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
 
   const hasMatchingToken = (item) =>
     expectedTokens.length > 0 && item.tokens.some((token) => expectedTokens.includes(token));
+  const isPreferredStatus = (status) =>
+    status === "success" ||
+    status === "open" ||
+    status === "closed" ||
+    status.includes("in_transit") ||
+    status.includes("out_for_delivery") ||
+    status.includes("delivered");
 
   const preferredByTokenAndStatus = normalized.find(
-    (item) => hasMatchingToken(item) && (item.status === "success" || item.status === "open")
+    (item) => hasMatchingToken(item) && isPreferredStatus(item.status)
   );
   if (preferredByTokenAndStatus) {
     return {
       tracking_url: preferredByTokenAndStatus.trackingUrl,
       fulfillment_number:
-        preferredByTokenAndStatus.fulfillment?.tracking_number || expectedTrackingNumber || "",
+        pickPrimaryTrackingNumber(preferredByTokenAndStatus.fulfillment) ||
+        expectedTrackingNumber ||
+        "",
     };
   }
 
@@ -202,14 +270,25 @@ function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
   if (preferredByToken) {
     return {
       tracking_url: preferredByToken.trackingUrl,
-      fulfillment_number: preferredByToken.fulfillment?.tracking_number || expectedTrackingNumber || "",
+      fulfillment_number: pickPrimaryTrackingNumber(preferredByToken.fulfillment) || expectedTrackingNumber || "",
     };
   }
 
-  const preferredByStatus = normalized.find((item) => item.status === "success") || normalized[0];
+  const preferredByStatus = normalized.find((item) => isPreferredStatus(item.status)) || normalized[0];
   return {
     tracking_url: preferredByStatus.trackingUrl,
-    fulfillment_number: preferredByStatus.fulfillment?.tracking_number || expectedTrackingNumber || "",
+    fulfillment_number: pickPrimaryTrackingNumber(preferredByStatus.fulfillment) || expectedTrackingNumber || "",
+  };
+}
+
+function buildTrackingLookupDebug() {
+  return {
+    attempted: false,
+    shopify_order_id: "",
+    fulfillments_found: 0,
+    resolved: false,
+    source: "",
+    reason: "",
   };
 }
 
@@ -254,23 +333,38 @@ export default async (request) => {
       hasTag(order.tags, "foraneo") && isFulfilledStatus(order.fulfillment_status);
 
     if (shouldResolveForaneoTracking) {
-      const shopifyOrderId = parseShopifyOrderId(order.shopify_id);
-      if (shopifyOrderId) {
+      const trackingLookup = buildTrackingLookupDebug();
+      trackingLookup.attempted = true;
+      trackingLookup.shopify_order_id = parseShopifyOrderId(order.shopify_id);
+      trackingLookup.source = "database";
+
+      if (trackingLookup.shopify_order_id) {
         try {
-          const fulfillments = await fetchOrderFulfillmentsFromShopify(shopifyOrderId);
-          const resolved = selectTrackingFromFulfillments(fulfillments, order.fulfillment_number);
+          const fetched = await fetchOrderFulfillmentsFromShopify(trackingLookup.shopify_order_id);
+          trackingLookup.reason = fetched.reason;
+          trackingLookup.fulfillments_found = fetched.fulfillments.length;
+
+          const resolved = selectTrackingFromFulfillments(fetched.fulfillments, order.fulfillment_number);
           if (resolved.tracking_url) {
             order.tracking_url = resolved.tracking_url;
+            trackingLookup.resolved = true;
+            trackingLookup.source = "shopify";
           }
           if (resolved.fulfillment_number) {
             order.fulfillment_number = resolved.fulfillment_number;
           }
         } catch (error) {
+          trackingLookup.reason = String(error?.message || "shopify_lookup_failed");
           console.error("shopify fulfillments lookup error", error);
         }
+      } else {
+        trackingLookup.reason = "missing_shopify_order_id";
       }
+
+      order.tracking_lookup = trackingLookup;
     }
 
+    order.tracking_url = normalizeTrackingUrl(order.tracking_url);
     return jsonResponse({ found: true, order }, 200);
   } catch (error) {
     console.error("order-lookup error", error);

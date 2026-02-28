@@ -93,7 +93,69 @@ function toTrackingTokens(value) {
     .filter(Boolean);
 }
 
+function extractTrackingEntries(fulfillment) {
+  const entries = [];
+  const directCompany = String(fulfillment?.tracking_company || "").trim();
+  const pushEntry = (number, url, company = "") => {
+    const normalizedNumber = String(number || "").trim();
+    const normalizedUrl = normalizeTrackingUrl(url);
+    const normalizedCompany = String(company || "").trim();
+
+    if (!normalizedNumber && !normalizedUrl) return;
+    entries.push({
+      number: normalizedNumber,
+      url: normalizedUrl,
+      company: normalizedCompany || directCompany,
+    });
+  };
+
+  const trackingInfoSnake = Array.isArray(fulfillment?.tracking_info)
+    ? fulfillment.tracking_info
+    : [];
+  trackingInfoSnake.forEach((info) => {
+    pushEntry(info?.number, info?.url || info?.tracking_url, info?.company);
+  });
+
+  const trackingInfoCamel = Array.isArray(fulfillment?.trackingInfo)
+    ? fulfillment.trackingInfo
+    : [];
+  trackingInfoCamel.forEach((info) => {
+    pushEntry(info?.number, info?.url || info?.trackingUrl, info?.company);
+  });
+
+  const directNumbers = [
+    String(fulfillment?.tracking_number || "").trim(),
+    ...(Array.isArray(fulfillment?.tracking_numbers)
+      ? fulfillment.tracking_numbers.map((value) => String(value || "").trim())
+      : []),
+  ].filter(Boolean);
+
+  const directUrls = [
+    fulfillment?.tracking_url,
+    ...(Array.isArray(fulfillment?.tracking_urls) ? fulfillment.tracking_urls : []),
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (directNumbers.length || directUrls.length) {
+    const rowCount = Math.max(directNumbers.length || 1, directUrls.length || 1);
+    for (let index = 0; index < rowCount; index += 1) {
+      pushEntry(
+        directNumbers[index] || directNumbers[0] || "",
+        directUrls[index] || directUrls[0] || "",
+        directCompany
+      );
+    }
+  }
+
+  return entries;
+}
+
 function pickPrimaryTrackingNumber(fulfillment) {
+  const trackingEntries = extractTrackingEntries(fulfillment);
+  const primaryFromEntry = trackingEntries.find((entry) => entry.number);
+  if (primaryFromEntry) return primaryFromEntry.number;
+
   const direct = String(fulfillment?.tracking_number || "").trim();
   if (direct) return direct;
   if (Array.isArray(fulfillment?.tracking_numbers) && fulfillment.tracking_numbers.length > 0) {
@@ -195,16 +257,87 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId) {
     headers: commonHeaders,
   });
 
-  if (!orderResponse.ok) {
-    const statusSummary = `fulfillments:${directResponse.status};order:${orderResponse.status}`;
+  if (orderResponse.ok) {
+    const orderPayload = await orderResponse.json().catch(() => ({}));
+    const fulfillments = Array.isArray(orderPayload?.order?.fulfillments)
+      ? orderPayload.order.fulfillments
+      : [];
+    if (fulfillments.length > 0) {
+      return {
+        fulfillments,
+        reason: "order_endpoint",
+      };
+    }
+  }
+
+  const graphQlEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
+  const graphQlQuery = `
+    query OrderFulfillments($id: ID!) {
+      order(id: $id) {
+        fulfillments(first: 50) {
+          nodes {
+            status
+            shipmentStatus
+            trackingInfo {
+              number
+              url
+              company
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  let graphQlStatus = 0;
+  let graphQlReason = "graphql_not_attempted";
+
+  try {
+    const graphQlResponse = await fetch(graphQlEndpoint, {
+      method: "POST",
+      headers: commonHeaders,
+      body: JSON.stringify({
+        query: graphQlQuery,
+        variables: {
+          id: `gid://shopify/Order/${shopifyOrderId}`,
+        },
+      }),
+    });
+
+    graphQlStatus = graphQlResponse.status;
+
+    if (graphQlResponse.ok) {
+      const payload = await graphQlResponse.json().catch(() => ({}));
+      const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+      if (!errors.length) {
+        const fulfillments = Array.isArray(payload?.data?.order?.fulfillments?.nodes)
+          ? payload.data.order.fulfillments.nodes
+          : [];
+        if (fulfillments.length > 0) {
+          return {
+            fulfillments,
+            reason: "graphql_order_fulfillments",
+          };
+        }
+        graphQlReason = "graphql_no_fulfillments";
+      } else {
+        graphQlReason = `graphql_errors:${errors.map((error) => error?.message).filter(Boolean).join(" | ")}`;
+      }
+    } else {
+      graphQlReason = `graphql_http_${graphQlResponse.status}`;
+    }
+  } catch (error) {
+    graphQlReason = `graphql_fetch_failed:${String(error?.message || "unknown")}`;
+  }
+
+  if (!directResponse.ok && !orderResponse.ok && graphQlStatus >= 400) {
+    const statusSummary = `fulfillments:${directResponse.status};order:${orderResponse.status};graphql:${graphQlStatus}`;
     throw new Error(`Shopify lookup failed (${statusSummary})`);
   }
 
-  const orderPayload = await orderResponse.json().catch(() => ({}));
-  const fulfillments = Array.isArray(orderPayload?.order?.fulfillments) ? orderPayload.order.fulfillments : [];
   return {
-    fulfillments,
-    reason: "order_endpoint",
+    fulfillments: [],
+    reason: graphQlReason || "no_fulfillments_found",
   };
 }
 
@@ -213,19 +346,22 @@ function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
 
   const normalized = fulfillments
     .map((fulfillment) => {
+      const trackingEntries = extractTrackingEntries(fulfillment);
       const primaryTrackingNumber = pickPrimaryTrackingNumber(fulfillment);
       const tokens = new Set([
         ...toTrackingTokens(primaryTrackingNumber),
         ...(Array.isArray(fulfillment?.tracking_numbers)
           ? fulfillment.tracking_numbers.flatMap((value) => toTrackingTokens(value))
           : []),
+        ...trackingEntries.flatMap((entry) => toTrackingTokens(entry.number)),
       ]);
 
-      const rawTrackingUrl =
-        fulfillment?.tracking_url ||
-        (Array.isArray(fulfillment?.tracking_urls) ? fulfillment.tracking_urls[0] : "");
-
-      const trackingUrl = normalizeTrackingUrl(rawTrackingUrl);
+      const trackingUrl =
+        trackingEntries.map((entry) => entry.url).find(Boolean) ||
+        normalizeTrackingUrl(
+          fulfillment?.tracking_url ||
+            (Array.isArray(fulfillment?.tracking_urls) ? fulfillment.tracking_urls[0] : "")
+        );
       const status = String(fulfillment?.status || fulfillment?.shipment_status || "")
         .toLowerCase()
         .trim();
@@ -237,7 +373,8 @@ function selectTrackingFromFulfillments(fulfillments, expectedTrackingNumber) {
         trackingUrl,
       };
     })
-    .filter((item) => item.trackingUrl);
+    .filter((item) => item.trackingUrl)
+    .reverse();
 
   if (!normalized.length) {
     return { tracking_url: "", fulfillment_number: "" };

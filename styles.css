@@ -173,11 +173,34 @@ body {
   width: min(100%, 393px);
   margin: 0 auto;
   min-height: 100vh;
-  background: #ffffff url("assets/payment-pending.svg") top center / 100% 100% no-repeat;
+  background: #ffffff;
 }
 
 .pending-page::before {
   content: "";
+  position: absolute;
+  inset: 0;
+  background: url("assets/payment-pending-gradient.svg") top center / 100% 100% no-repeat;
+  transform: translateY(100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pending-page.is-animating::before {
+  animation: pending-gradient-rise 1000ms ease-out forwards;
+}
+
+.pending-artboard {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pending-top-loader-fill {
   position: absolute;
   top: 7.63%;
   left: 8.91%;
@@ -185,28 +208,12 @@ body {
   height: 1.17%;
   border-radius: 999px;
   background: #f65508;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.pending-page.is-animating::before {
-  animation: pending-top-loader-grow 1000ms ease-out forwards;
-}
-
-.pending-gradient-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64%;
-  background: #ffffff;
-  transform-origin: top;
   z-index: 3;
   pointer-events: none;
 }
 
-.pending-page.is-animating .pending-gradient-mask {
-  animation: pending-gradient-reveal 1000ms ease-out forwards;
+.pending-page.is-animating .pending-top-loader-fill {
+  animation: pending-top-loader-grow 1000ms ease-out forwards;
 }
 
 .sr-only {
@@ -262,12 +269,12 @@ body {
   }
 }
 
-@keyframes pending-gradient-reveal {
+@keyframes pending-gradient-rise {
   from {
-    transform: scaleY(1);
+    transform: translateY(100%);
   }
   to {
-    transform: scaleY(0);
+    transform: translateY(0);
   }
 }
 

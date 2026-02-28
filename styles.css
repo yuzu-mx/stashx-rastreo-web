@@ -176,27 +176,20 @@ body {
   background: #ffffff url("assets/payment-pending.svg") top center / 100% 100% no-repeat;
 }
 
-.pending-top-loader {
+.pending-page::before {
+  content: "";
   position: absolute;
-  top: 137px;
-  left: 49px;
-  width: 223px;
-  height: 20px;
+  top: 7.63%;
+  left: 8.91%;
+  width: 0.9%;
+  height: 1.17%;
   border-radius: 999px;
-  background: #f0d8bd;
+  background: #f65508;
   z-index: 4;
   pointer-events: none;
 }
 
-.pending-top-loader-fill {
-  width: 0;
-  height: 100%;
-  border-radius: 999px;
-  background: #f75f05;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.35);
-}
-
-.pending-page.is-animating .pending-top-loader-fill {
+.pending-page.is-animating::before {
   animation: pending-top-loader-grow 1000ms ease-out forwards;
 }
 
@@ -262,10 +255,10 @@ body {
 
 @keyframes pending-top-loader-grow {
   from {
-    width: 0;
+    width: 0.9%;
   }
   to {
-    width: 12%;
+    width: 3.0%;
   }
 }
 

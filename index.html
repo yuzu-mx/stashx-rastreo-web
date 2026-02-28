@@ -144,6 +144,34 @@
       </section>
     </main>
 
+    <main id="foraneoFulfilledScreen" class="status-page foraneo-fulfilled-page" hidden>
+      <section class="status-shell">
+        <div class="status-progress" style="--progress: 100" aria-hidden="true">
+          <span class="status-progress__track">
+            <span class="status-progress__fill"></span>
+          </span>
+        </div>
+
+        <div class="status-copy">
+          <h1 class="status-title">Pedido preparado con guía de rastreo</h1>
+          <p class="status-text">Tu pedido ya fue preparado y cuenta con guía de rastreo asignada.</p>
+          <p class="status-text">
+            Recuerda que la guía comenzará a mostrar movimiento una vez que la paquetería realice la
+            recolección. Esto puede tardar entre 1 y 2 días hábiles.
+          </p>
+
+          <p id="foraneoFulfilledTrackingLabel" class="status-label" hidden>Número de rastreo:</p>
+          <button
+            id="foraneoFulfilledTrackingNumber"
+            class="status-tracking-number"
+            type="button"
+            hidden
+            aria-label="Copiar número de rastreo"
+          ></button>
+        </div>
+      </section>
+    </main>
+
     <main id="localFulfilledScreen" class="status-page local-fulfilled-page" hidden>
       <section class="status-shell status-shell--with-actions">
         <div class="status-progress" style="--progress: 100" aria-hidden="true">

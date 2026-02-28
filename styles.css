@@ -68,7 +68,7 @@ body {
 .tracking-page {
   width: min(100%, 393px);
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: 80vh;
   padding: 30px 30px 24px;
 }
 

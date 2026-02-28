@@ -2,7 +2,10 @@ const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
 const localPreparingScreen = document.getElementById("localPreparingScreen");
 const foraneoPreparingScreen = document.getElementById("foraneoPreparingScreen");
+const foraneoFulfilledScreen = document.getElementById("foraneoFulfilledScreen");
 const localFulfilledScreen = document.getElementById("localFulfilledScreen");
+const foraneoFulfilledTrackingLabel = document.getElementById("foraneoFulfilledTrackingLabel");
+const foraneoFulfilledTrackingNumber = document.getElementById("foraneoFulfilledTrackingNumber");
 const localFulfilledTrackingLabel = document.getElementById("localFulfilledTrackingLabel");
 const localFulfilledTrackingNumber = document.getElementById("localFulfilledTrackingNumber");
 const localFulfilledTrackingBtn = document.getElementById("localFulfilledTrackingBtn");
@@ -26,6 +29,7 @@ const statusScreens = [
   pendingScreen,
   localPreparingScreen,
   foraneoPreparingScreen,
+  foraneoFulfilledScreen,
   localFulfilledScreen,
 ].filter(Boolean);
 
@@ -167,6 +171,26 @@ function showLocalPreparingScreen() {
 
 function showForaneoPreparingScreen() {
   showStatusScreen(foraneoPreparingScreen);
+}
+
+function showForaneoFulfilledScreen(order) {
+  const trackingNumber = String(order?.fulfillment_number || "").trim();
+
+  if (foraneoFulfilledTrackingLabel) {
+    foraneoFulfilledTrackingLabel.hidden = !trackingNumber;
+  }
+
+  if (foraneoFulfilledTrackingNumber) {
+    if (trackingNumber) {
+      foraneoFulfilledTrackingNumber.textContent = trackingNumber;
+      foraneoFulfilledTrackingNumber.hidden = false;
+    } else {
+      foraneoFulfilledTrackingNumber.textContent = "";
+      foraneoFulfilledTrackingNumber.hidden = true;
+    }
+  }
+
+  showStatusScreen(foraneoFulfilledScreen);
 }
 
 async function copyTextToClipboard(text) {
@@ -361,6 +385,23 @@ if (localFulfilledTrackingNumber) {
   });
 }
 
+if (foraneoFulfilledTrackingNumber) {
+  foraneoFulfilledTrackingNumber.addEventListener("click", async () => {
+    const trackingNumber = foraneoFulfilledTrackingNumber.textContent?.trim() || "";
+    if (!trackingNumber) {
+      showToast("Aún no tenemos número de rastreo para este pedido.");
+      return;
+    }
+
+    const copied = await copyTextToClipboard(trackingNumber);
+    if (copied) {
+      showToast("Número copiado en el portapapeles");
+    } else {
+      showToast("No se pudo copiar el número.");
+    }
+  });
+}
+
 trackingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -406,8 +447,12 @@ trackingForm.addEventListener("submit", async (event) => {
       return;
     }
 
-    if (hasForaneoTag(result.order.tags) && !isLocalFulfilledStatus(fulfillmentStatus)) {
-      showForaneoPreparingScreen();
+    if (hasForaneoTag(result.order.tags)) {
+      if (isLocalFulfilledStatus(fulfillmentStatus)) {
+        showForaneoFulfilledScreen(result.order);
+      } else {
+        showForaneoPreparingScreen();
+      }
       return;
     }
 

@@ -76,6 +76,21 @@
       />
     </main>
 
+    <main id="localFulfilledScreen" class="status-page local-fulfilled-page" hidden>
+      <img
+        class="status-artboard local-fulfilled-artboard"
+        src="assets/local-fulfilled-base.svg"
+        alt="Tu pedido local está preparado y por salir a ruta"
+      />
+
+      <div class="local-fulfilled-overlay">
+        <p id="localFulfilledTrackingNumber" class="local-fulfilled-tracking-number" hidden></p>
+        <button id="localFulfilledTrackingBtn" class="local-fulfilled-track-btn" type="button" hidden>
+          ABRIR LINK DE RASTREO
+        </button>
+      </div>
+    </main>
+
     <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 
     <script src="app.js"></script>

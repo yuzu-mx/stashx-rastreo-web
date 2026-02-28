@@ -204,6 +204,61 @@ body {
   pointer-events: none;
 }
 
+.local-fulfilled-overlay {
+  position: absolute;
+  inset: 0;
+  width: min(100%, 393px);
+  height: 100%;
+  margin: 0 auto;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.local-fulfilled-tracking-number {
+  position: absolute;
+  left: 7.82%;
+  right: 7.82%;
+  top: 43.7%;
+  height: 6.2%;
+  margin: 0;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  background: rgba(247, 247, 247, 0.98);
+  color: var(--olive-900);
+  font-family: "Inclusive Sans", sans-serif;
+  font-size: clamp(24px, 6.3vw, 28px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.local-fulfilled-track-btn {
+  position: absolute;
+  left: 7.82%;
+  right: 7.82%;
+  bottom: 5.96%;
+  min-height: 53.5px;
+  border: 1.5px solid var(--olive-900);
+  border-radius: 999px;
+  background: var(--olive-300);
+  color: var(--olive-900);
+  font-family: "Inclusive Sans", sans-serif;
+  font-size: clamp(20px, 5.2vw, 24px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.local-fulfilled-track-btn:active {
+  transform: translateY(1px);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

@@ -3,6 +3,10 @@ const pendingScreen = document.getElementById("pendingScreen");
 const pendingArtboard = document.querySelector(".pending-artboard");
 const localPreparingScreen = document.getElementById("localPreparingScreen");
 const localPreparingArtboard = document.querySelector(".local-preparing-artboard");
+const localFulfilledScreen = document.getElementById("localFulfilledScreen");
+const localFulfilledArtboard = document.querySelector(".local-fulfilled-artboard");
+const localFulfilledTrackingNumber = document.getElementById("localFulfilledTrackingNumber");
+const localFulfilledTrackingBtn = document.getElementById("localFulfilledTrackingBtn");
 const trackingForm = document.getElementById("trackingForm");
 const phoneInput = document.getElementById("phoneInput");
 const orderInput = document.getElementById("orderInput");
@@ -16,7 +20,7 @@ let orderDigits = "";
 let lastToast = { message: "", time: 0 };
 let isSubmitting = false;
 
-const statusScreens = [pendingScreen, localPreparingScreen].filter(Boolean);
+const statusScreens = [pendingScreen, localPreparingScreen, localFulfilledScreen].filter(Boolean);
 
 function formatPhone(digits) {
   if (digits.length <= 2) return digits;
@@ -149,8 +153,58 @@ function showLocalPreparingScreen() {
   showStatusScreen(localPreparingScreen, localPreparingArtboard);
 }
 
+function normalizeTrackingUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const firstToken = raw.split(/[\s,]+/).find(Boolean);
+  if (!firstToken) return "";
+
+  const withProtocol = /^https?:\/\//i.test(firstToken)
+    ? firstToken
+    : `https://${firstToken}`;
+
+  try {
+    return new URL(withProtocol).toString();
+  } catch {
+    return "";
+  }
+}
+
+function showLocalFulfilledScreen(order) {
+  const trackingNumber = String(order?.fulfillment_number || "").trim();
+  const trackingUrl = normalizeTrackingUrl(order?.tracking_url);
+
+  if (localFulfilledTrackingNumber) {
+    if (trackingNumber) {
+      localFulfilledTrackingNumber.textContent = trackingNumber;
+      localFulfilledTrackingNumber.hidden = false;
+    } else {
+      localFulfilledTrackingNumber.textContent = "";
+      localFulfilledTrackingNumber.hidden = true;
+    }
+  }
+
+  if (localFulfilledTrackingBtn) {
+    if (trackingUrl) {
+      localFulfilledTrackingBtn.dataset.url = trackingUrl;
+      localFulfilledTrackingBtn.hidden = false;
+    } else {
+      localFulfilledTrackingBtn.dataset.url = "";
+      localFulfilledTrackingBtn.hidden = true;
+    }
+  }
+
+  showStatusScreen(localFulfilledScreen, localFulfilledArtboard);
+}
+
 function hasLocalTag(tags) {
   return String(tags || "").toLowerCase().includes("local");
+}
+
+function isLocalFulfilledStatus(status) {
+  const value = String(status || "").toLowerCase().trim();
+  return value === "fulfilled" || value === "partially" || value.includes("partially");
 }
 
 async function lookupOrder(payload) {
@@ -216,6 +270,18 @@ orderInput.addEventListener("keydown", (event) => {
   }
 });
 
+if (localFulfilledTrackingBtn) {
+  localFulfilledTrackingBtn.addEventListener("click", () => {
+    const url = localFulfilledTrackingBtn.dataset.url || "";
+    if (!url) {
+      showToast("Aún no tenemos un link de rastreo para este pedido.");
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
+}
+
 trackingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -252,27 +318,28 @@ trackingForm.addEventListener("submit", async (event) => {
     }
 
     const fulfillmentStatus = String(result.order.fulfillment_status || "").toLowerCase();
-    if (hasLocalTag(result.order.tags) && fulfillmentStatus !== "fulfilled") {
-      showLocalPreparingScreen();
+    if (hasLocalTag(result.order.tags)) {
+      if (isLocalFulfilledStatus(fulfillmentStatus)) {
+        showLocalFulfilledScreen(result.order);
+      } else {
+        showLocalPreparingScreen();
+      }
       return;
     }
 
     showToast("Pedido encontrado. Continuamos con la siguiente pantalla.");
-    console.log("Order lookup result:", result.order);
   } catch (error) {
-    showToast(error.message || "Ocurrió un error al buscar el pedido.");
+    showToast(error.message || "No se pudo consultar el pedido.");
   } finally {
     setSubmittingState(false);
   }
 });
 
-window.addEventListener("load", () => {
-  prefillFromUrlParams();
-  updateButtonState();
+prefillFromUrlParams();
+updateButtonState();
 
-  setTimeout(() => {
+window.addEventListener("load", () => {
+  if (phoneInput.value.length === 0) {
     phoneInput.focus();
-    const cursor = phoneInput.value.length;
-    phoneInput.setSelectionRange(cursor, cursor);
-  }, 100);
+  }
 });

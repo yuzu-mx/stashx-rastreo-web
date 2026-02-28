@@ -12,6 +12,9 @@ const searchOrderBtn = document.getElementById("searchOrderBtn");
 const toastRegion = document.getElementById("toastRegion");
 
 const LOOKUP_ENDPOINT = "/.netlify/functions/order-lookup";
+const ORDER_PREFIX = "ST-";
+const ORDER_MIN_DIGITS = 3;
+const ORDER_MAX_DIGITS = 9;
 
 let phoneDigits = "";
 let orderDigits = "";
@@ -31,7 +34,7 @@ function isPhoneValid() {
 }
 
 function isOrderValid() {
-  return /^ST-\d{3,9}$/.test(orderInput.value);
+  return orderDigits.length >= ORDER_MIN_DIGITS;
 }
 
 function applyPhoneValue(rawValue) {
@@ -41,10 +44,23 @@ function applyPhoneValue(rawValue) {
 }
 
 function applyOrderValue(rawValue) {
-  const raw = String(rawValue || "").toUpperCase();
-  const cleaned = raw.replace(/[^ST0-9-]/g, "");
-  orderDigits = cleaned.replace(/\D/g, "").slice(0, 9);
-  orderInput.value = cleaned.length === 0 ? "" : `ST-${orderDigits}`;
+  orderDigits = String(rawValue || "")
+    .replace(/\D/g, "")
+    .slice(0, ORDER_MAX_DIGITS);
+  orderInput.value = `${ORDER_PREFIX}${orderDigits}`;
+}
+
+function placeCursorAtOrderEnd() {
+  if (!orderInput || typeof orderInput.setSelectionRange !== "function") return;
+
+  const position = orderInput.value.length;
+  requestAnimationFrame(() => {
+    try {
+      orderInput.setSelectionRange(position, position);
+    } catch {
+      // Some mobile browsers can block range updates while keyboard is opening.
+    }
+  });
 }
 
 function prefillFromUrlParams() {
@@ -61,6 +77,8 @@ function prefillFromUrlParams() {
 
   if (orderParam) {
     applyOrderValue(orderParam);
+  } else {
+    applyOrderValue(orderInput.value);
   }
 }
 
@@ -109,7 +127,7 @@ function validatePhoneWithToast() {
 
 function validateOrderWithToast() {
   if (!isOrderValid()) {
-    showToast("El pedido debe iniciar con ST- y tener al menos 3 números.");
+    showToast("Ingresa al menos 3 números de pedido.");
     return false;
   }
   return true;
@@ -271,13 +289,19 @@ phoneInput.addEventListener("blur", () => {
 
 orderInput.addEventListener("input", (event) => {
   applyOrderValue(event.target.value);
+  placeCursorAtOrderEnd();
   updateButtonState();
 });
 
 orderInput.addEventListener("blur", () => {
-  if (orderInput.value.length > 0 && !isOrderValid()) {
+  if (orderDigits.length > 0 && !isOrderValid()) {
     validateOrderWithToast();
   }
+});
+
+orderInput.addEventListener("focus", () => {
+  applyOrderValue(orderInput.value);
+  placeCursorAtOrderEnd();
 });
 
 orderInput.addEventListener("keydown", (event) => {

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stashx | Rastrea tu pedido</title>
+    <meta
+      name="description"
+      content="Rastrea tu pedido con tu teléfono y número de pedido en Stashx."
+    />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="tracking-page">
+      <header class="brand-wrap" aria-label="Stashx">
+        <img class="brand-logo" src="assets/logo.png" alt="Stashx" />
+      </header>
+
+      <section class="tracking-content">
+        <h1>Rastrea tu pedido</h1>
+
+        <form id="trackingForm" novalidate>
+          <div class="field-wrap">
+            <label class="sr-only" for="phoneInput">Teléfono a 10 dígitos</label>
+            <input
+              id="phoneInput"
+              class="tracking-input"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              enterkeyhint="next"
+              maxlength="12"
+              placeholder="Teléfono a 10 dígitos"
+              autofocus
+              required
+            />
+          </div>
+
+          <div class="field-wrap">
+            <label class="sr-only" for="orderInput">Número de pedido</label>
+            <input
+              id="orderInput"
+              class="tracking-input order-input"
+              type="text"
+              inputmode="text"
+              autocapitalize="characters"
+              autocomplete="off"
+              enterkeyhint="search"
+              maxlength="12"
+              placeholder="Número de pedido"
+              required
+            />
+          </div>
+
+          <button id="searchOrderBtn" class="search-btn" type="submit" disabled>
+            BUSCAR PEDIDO
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

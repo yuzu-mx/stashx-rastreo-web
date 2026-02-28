@@ -53,7 +53,7 @@ function applyOrderValue(rawValue) {
   orderDigits = String(rawValue || "")
     .replace(/\D/g, "")
     .slice(0, ORDER_MAX_DIGITS);
-  orderInput.value = `${ORDER_PREFIX}${orderDigits}`;
+  orderInput.value = orderDigits.length > 0 ? `${ORDER_PREFIX}${orderDigits}` : "";
 }
 
 function placeCursorAtOrderEnd() {

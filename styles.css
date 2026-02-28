@@ -252,8 +252,8 @@ body {
   color: var(--olive-900);
   font-family: "Creolia", serif;
   font-weight: 400;
-  font-size: clamp(44px, 11.5vw, 52px);
-  line-height: 0.96;
+  font-size: clamp(30px, 8.2vw, 32px);
+  line-height: 1.02;
 }
 
 .status-text {
@@ -261,8 +261,8 @@ body {
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
   font-weight: 500;
-  font-size: clamp(20px, 5.5vw, 22px);
-  line-height: 1.25;
+  font-size: 18px;
+  line-height: 1.3;
   letter-spacing: 0.003em;
 }
 
@@ -275,7 +275,7 @@ body {
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
   font-weight: 700;
-  font-size: clamp(24px, 6.4vw, 31px);
+  font-size: clamp(30px, 8.2vw, 32px);
   line-height: 1.15;
 }
 
@@ -284,8 +284,8 @@ body {
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
   font-weight: 500;
-  font-size: clamp(20px, 5.5vw, 22px);
-  line-height: 1.2;
+  font-size: 18px;
+  line-height: 1.3;
 }
 
 .status-schedule-row strong {
@@ -297,7 +297,7 @@ body {
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
   font-weight: 700;
-  font-size: clamp(24px, 6.4vw, 31px);
+  font-size: clamp(30px, 8.2vw, 32px);
   line-height: 1.1;
 }
 

@@ -167,6 +167,78 @@ body {
   transform: translateY(1px);
 }
 
+.pending-page {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 393px);
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.pending-artboard {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pending-progress {
+  position: absolute;
+  top: 92px;
+  left: 30px;
+  right: 30px;
+  z-index: 4;
+  padding-top: 2px;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.pending-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: #e7e7e7;
+  overflow: hidden;
+}
+
+.pending-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: #223601;
+}
+
+.pending-progress-value {
+  margin: 8px 0 0;
+  font-family: "Inclusive Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  color: #223601;
+}
+
+.pending-page.is-animating .pending-progress-fill {
+  animation: pending-progress-fill 1000ms ease-out forwards;
+}
+
+.pending-gradient-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62%;
+  background: #ffffff;
+  transform-origin: top;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pending-page.is-animating .pending-gradient-mask {
+  animation: pending-gradient-reveal 1000ms ease-out forwards;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -208,6 +280,24 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes pending-progress-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 10%;
+  }
+}
+
+@keyframes pending-gradient-reveal {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
   }
 }
 

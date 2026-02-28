@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="tracking-page">
+    <main id="lookupScreen" class="tracking-page">
       <header class="brand-wrap" aria-label="Stashx">
         <img class="brand-logo" src="assets/logo.png" alt="Stashx" />
       </header>
@@ -58,6 +58,21 @@
           </button>
         </form>
       </section>
+    </main>
+
+    <main id="pendingScreen" class="pending-page" hidden>
+      <div class="pending-progress" aria-hidden="true">
+        <div class="pending-progress-track">
+          <div id="pendingProgressFill" class="pending-progress-fill"></div>
+        </div>
+        <p id="pendingProgressValue" class="pending-progress-value">0%</p>
+      </div>
+      <div class="pending-gradient-mask" aria-hidden="true"></div>
+      <img
+        class="pending-artboard"
+        src="assets/payment-pending.svg"
+        alt="Tu pedido está pendiente de pago"
+      />
     </main>
 
     <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>

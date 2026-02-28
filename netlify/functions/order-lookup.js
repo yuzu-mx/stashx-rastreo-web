@@ -49,12 +49,13 @@ function validatePayload(phone, orderNumber) {
 
 const LOOKUP_QUERY = `
   SELECT
-    order_id,
-    order_name,
-    phone,
-    tracking_url,
-    fulfillment_status,
+    name AS order_name,
+    shipping_phone AS phone,
+    tags,
     financial_status,
+    fulfillment_status,
+    tracking_url,
+    fulfillment_number,
     created_at,
     paid_at,
     onfleet_created_at,
@@ -62,15 +63,13 @@ const LOOKUP_QUERY = `
     onfleet_failed_at,
     lalamove_delivered_at,
     shipping_type,
-    local_delivery_type,
     full_address,
     notes,
-    tags,
     jt_label_url,
     jt_url
-  FROM public.orders_completed
-  WHERE right(regexp_replace(COALESCE(phone, ''), '\\D', '', 'g'), 10) = $1
-    AND upper(trim(COALESCE(order_name, ''))) = $2
+  FROM public.orders_full
+  WHERE upper(trim(COALESCE(name, ''))) = $1
+    AND regexp_replace(COALESCE(shipping_phone, ''), '\\D', '', 'g') ILIKE '%' || $2 || '%'
   ORDER BY created_at DESC NULLS LAST
   LIMIT 1
 `;
@@ -106,7 +105,7 @@ export default async (request) => {
   }
 
   try {
-    const { rows } = await pool.query(LOOKUP_QUERY, [phone, orderNumber]);
+    const { rows } = await pool.query(LOOKUP_QUERY, [orderNumber, phone]);
     if (!rows.length) {
       return jsonResponse({ found: false, order: null }, 200);
     }

@@ -27,6 +27,36 @@ function isOrderValid() {
   return /^ST-\d{3,9}$/.test(orderInput.value);
 }
 
+function applyPhoneValue(rawValue) {
+  const digits = String(rawValue || "").replace(/\D/g, "");
+  phoneDigits = (digits.length > 10 ? digits.slice(-10) : digits).slice(0, 10);
+  phoneInput.value = formatPhone(phoneDigits);
+}
+
+function applyOrderValue(rawValue) {
+  const raw = String(rawValue || "").toUpperCase();
+  const cleaned = raw.replace(/[^ST0-9-]/g, "");
+  orderDigits = cleaned.replace(/\D/g, "").slice(0, 9);
+  orderInput.value = cleaned.length === 0 ? "" : `ST-${orderDigits}`;
+}
+
+function prefillFromUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const phoneParam = params.get("phone");
+  const orderParam =
+    params.get("order_name") ||
+    params.get("orderNumber") ||
+    params.get("order_number");
+
+  if (phoneParam) {
+    applyPhoneValue(phoneParam);
+  }
+
+  if (orderParam) {
+    applyOrderValue(orderParam);
+  }
+}
+
 function updateButtonState() {
   searchOrderBtn.disabled = isSubmitting || !(isPhoneValid() && isOrderValid());
 }
@@ -106,8 +136,7 @@ async function lookupOrder(payload) {
 }
 
 phoneInput.addEventListener("input", (event) => {
-  phoneDigits = event.target.value.replace(/\D/g, "").slice(0, 10);
-  phoneInput.value = formatPhone(phoneDigits);
+  applyPhoneValue(event.target.value);
   updateButtonState();
 });
 
@@ -127,16 +156,7 @@ phoneInput.addEventListener("blur", () => {
 });
 
 orderInput.addEventListener("input", (event) => {
-  const raw = event.target.value.toUpperCase();
-  const cleaned = raw.replace(/[^ST0-9-]/g, "");
-  orderDigits = cleaned.replace(/\D/g, "").slice(0, 9);
-
-  if (cleaned.length === 0) {
-    orderInput.value = "";
-  } else {
-    orderInput.value = `ST-${orderDigits}`;
-  }
-
+  applyOrderValue(event.target.value);
   updateButtonState();
 });
 
@@ -205,6 +225,9 @@ trackingForm.addEventListener("submit", async (event) => {
 });
 
 window.addEventListener("load", () => {
+  prefillFromUrlParams();
+  updateButtonState();
+
   setTimeout(() => {
     phoneInput.focus();
     const cursor = phoneInput.value.length;

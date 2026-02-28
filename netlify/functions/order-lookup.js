@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 
 const REQUIRED_ENV = ["PGHOST", "PGDATABASE", "PGUSER", "PGPASSWORD"];
-const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || "latest";
+const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || "2025-10";
 const SHOPIFY_DOMAIN_ENV_KEYS = [
   "SHOPIFY_SHOP_DOMAIN",
   "SHOPIFY_STORE_DOMAIN",

@@ -221,20 +221,28 @@ body {
   top: 43.7%;
   height: 6.2%;
   margin: 0;
-  padding: 0 6px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: auto;
   border-radius: 8px;
+  border: 0;
   background: rgba(247, 247, 247, 0.98);
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
-  font-size: clamp(24px, 6.3vw, 28px);
-  font-weight: 600;
+  font-size: clamp(18px, 4.75vw, 21px);
+  font-weight: 500;
   line-height: 1.1;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  pointer-events: auto;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .local-fulfilled-track-btn {
@@ -249,7 +257,7 @@ body {
   color: var(--olive-900);
   font-family: "Inclusive Sans", sans-serif;
   font-size: clamp(20px, 5.2vw, 24px);
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   pointer-events: auto;

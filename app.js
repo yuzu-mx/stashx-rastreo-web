@@ -153,6 +153,38 @@ function showLocalPreparingScreen() {
   showStatusScreen(localPreparingScreen, localPreparingArtboard);
 }
 
+async function copyTextToClipboard(text) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Falls back to execCommand for older WebKit contexts.
+    }
+  }
+
+  const helper = document.createElement("textarea");
+  helper.value = value;
+  helper.setAttribute("readonly", "");
+  helper.style.position = "absolute";
+  helper.style.left = "-9999px";
+  document.body.appendChild(helper);
+  helper.select();
+
+  let didCopy = false;
+  try {
+    didCopy = document.execCommand("copy");
+  } catch {
+    didCopy = false;
+  }
+
+  document.body.removeChild(helper);
+  return didCopy;
+}
+
 function normalizeTrackingUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -279,6 +311,23 @@ if (localFulfilledTrackingBtn) {
     }
 
     window.open(url, "_blank", "noopener,noreferrer");
+  });
+}
+
+if (localFulfilledTrackingNumber) {
+  localFulfilledTrackingNumber.addEventListener("click", async () => {
+    const trackingNumber = localFulfilledTrackingNumber.textContent?.trim() || "";
+    if (!trackingNumber) {
+      showToast("Aún no tenemos número de rastreo para este pedido.");
+      return;
+    }
+
+    const copied = await copyTextToClipboard(trackingNumber);
+    if (copied) {
+      showToast("Número copiado en el portapapeles");
+    } else {
+      showToast("No se pudo copiar el número.");
+    }
   });
 }
 

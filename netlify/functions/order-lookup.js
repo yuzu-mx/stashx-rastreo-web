@@ -222,62 +222,128 @@ const LOOKUP_QUERY = `
   LIMIT 1
 `;
 
-async function fetchOrderFulfillmentsFromShopify(shopifyOrderId) {
+async function shopifyGraphQLRequest(shopDomain, accessToken, query, variables) {
+  const endpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "X-Shopify-Access-Token": accessToken,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: payload?.data || null,
+    errors,
+  };
+}
+
+function mapGraphQlFulfillment(fulfillment) {
+  const trackingInfo = Array.isArray(fulfillment?.trackingInfo) ? fulfillment.trackingInfo : [];
+  const trackingNumbers = trackingInfo.map((item) => String(item?.number || "").trim()).filter(Boolean);
+  const trackingUrls = trackingInfo.map((item) => String(item?.url || "").trim()).filter(Boolean);
+  const primaryNumber = trackingNumbers[0] || "";
+  const primaryUrl = trackingUrls[0] || "";
+
+  return {
+    status: String(fulfillment?.status || "").toLowerCase().trim(),
+    shipment_status: String(fulfillment?.shipmentStatus || "").toLowerCase().trim(),
+    created_at: String(fulfillment?.createdAt || ""),
+    updated_at: String(fulfillment?.updatedAt || fulfillment?.createdAt || ""),
+    trackingInfo,
+    tracking_info: trackingInfo,
+    tracking_number: primaryNumber,
+    tracking_numbers: trackingNumbers,
+    tracking_url: primaryUrl,
+    tracking_urls: trackingUrls,
+  };
+}
+
+function normalizeGraphQlOrderName(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^#/, "");
+}
+
+function buildOrderLookupQuery(orderNumber) {
+  const raw = String(orderNumber || "").trim();
+  if (!raw) return "";
+  const escaped = raw.replace(/"/g, '\\"');
+  return `name:${escaped}`;
+}
+
+async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
   const shopDomain = getShopifyShopDomain();
   const accessToken = getShopifyAccessToken();
-  if (!shopDomain || !accessToken || !shopifyOrderId) {
+  if (!shopDomain || !accessToken) {
     return {
       fulfillments: [],
-      reason: "missing_shopify_config_or_order_id",
+      reason: "missing_shopify_config",
+      debug: {
+        mode: "graphql_only",
+        by_id: {
+          attempted: false,
+          status: 0,
+          errors: [],
+          order_found: false,
+          fulfillments: 0,
+        },
+        by_name: {
+          attempted: false,
+          status: 0,
+          errors: [],
+          order_found: false,
+          candidates: 0,
+          fulfillments: 0,
+        },
+      },
     };
   }
 
-  const commonHeaders = {
-    "X-Shopify-Access-Token": accessToken,
-    "Content-Type": "application/json",
+  const debug = {
+    mode: "graphql_only",
+    by_id: {
+      attempted: false,
+      status: 0,
+      errors: [],
+      order_found: false,
+      fulfillments: 0,
+      order_gid: "",
+      order_name: "",
+    },
+    by_name: {
+      attempted: false,
+      status: 0,
+      errors: [],
+      order_found: false,
+      candidates: 0,
+      fulfillments: 0,
+      order_gid: "",
+      order_name: "",
+      query: "",
+    },
   };
 
-  const directFulfillmentsEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}/fulfillments.json?limit=250`;
-  const directResponse = await fetch(directFulfillmentsEndpoint, {
-    method: "GET",
-    headers: commonHeaders,
-  });
-
-  if (directResponse.ok) {
-    const payload = await directResponse.json().catch(() => ({}));
-    const fulfillments = Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
-    if (fulfillments.length > 0) {
-      return { fulfillments, reason: "fulfillments_endpoint" };
-    }
-  }
-
-  const orderEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}.json?fields=id,fulfillments`;
-  const orderResponse = await fetch(orderEndpoint, {
-    method: "GET",
-    headers: commonHeaders,
-  });
-
-  if (orderResponse.ok) {
-    const orderPayload = await orderResponse.json().catch(() => ({}));
-    const fulfillments = Array.isArray(orderPayload?.order?.fulfillments)
-      ? orderPayload.order.fulfillments
-      : [];
-    if (fulfillments.length > 0) {
-      return {
-        fulfillments,
-        reason: "order_endpoint",
-      };
-    }
-  }
-
-  const graphQlEndpoint = `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
-  const graphQlQuery = `
-    query OrderFulfillments($id: ID!) {
+  const byIdQuery = `
+    query OrderFulfillmentsById($id: ID!) {
       order(id: $id) {
+        id
+        name
+        legacyResourceId
         fulfillments(first: 50) {
           nodes {
+            id
             status
             shipmentStatus
+            createdAt
+            updatedAt
             trackingInfo {
               number
               url
@@ -289,55 +355,121 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId) {
     }
   `;
 
-  let graphQlStatus = 0;
-  let graphQlReason = "graphql_not_attempted";
-
-  try {
-    const graphQlResponse = await fetch(graphQlEndpoint, {
-      method: "POST",
-      headers: commonHeaders,
-      body: JSON.stringify({
-        query: graphQlQuery,
-        variables: {
-          id: `gid://shopify/Order/${shopifyOrderId}`,
-        },
-      }),
+  const parsedOrderId = parseShopifyOrderId(shopifyOrderId);
+  if (parsedOrderId) {
+    debug.by_id.attempted = true;
+    const byIdResult = await shopifyGraphQLRequest(shopDomain, accessToken, byIdQuery, {
+      id: `gid://shopify/Order/${parsedOrderId}`,
     });
 
-    graphQlStatus = graphQlResponse.status;
+    debug.by_id.status = byIdResult.status;
+    debug.by_id.errors = byIdResult.errors.map((error) => String(error?.message || "")).filter(Boolean);
 
-    if (graphQlResponse.ok) {
-      const payload = await graphQlResponse.json().catch(() => ({}));
-      const errors = Array.isArray(payload?.errors) ? payload.errors : [];
-      if (!errors.length) {
-        const fulfillments = Array.isArray(payload?.data?.order?.fulfillments?.nodes)
-          ? payload.data.order.fulfillments.nodes
-          : [];
-        if (fulfillments.length > 0) {
-          return {
-            fulfillments,
-            reason: "graphql_order_fulfillments",
-          };
-        }
-        graphQlReason = "graphql_no_fulfillments";
-      } else {
-        graphQlReason = `graphql_errors:${errors.map((error) => error?.message).filter(Boolean).join(" | ")}`;
+    const byIdOrder = byIdResult.data?.order || null;
+    if (byIdOrder) {
+      const fulfillments = Array.isArray(byIdOrder?.fulfillments?.nodes)
+        ? byIdOrder.fulfillments.nodes.map(mapGraphQlFulfillment)
+        : [];
+      debug.by_id.order_found = true;
+      debug.by_id.fulfillments = fulfillments.length;
+      debug.by_id.order_gid = String(byIdOrder?.id || "");
+      debug.by_id.order_name = String(byIdOrder?.name || "");
+
+      if (fulfillments.length > 0) {
+        return {
+          fulfillments,
+          reason: "graphql_by_id",
+          debug,
+        };
       }
-    } else {
-      graphQlReason = `graphql_http_${graphQlResponse.status}`;
     }
-  } catch (error) {
-    graphQlReason = `graphql_fetch_failed:${String(error?.message || "unknown")}`;
   }
 
-  if (!directResponse.ok && !orderResponse.ok && graphQlStatus >= 400) {
-    const statusSummary = `fulfillments:${directResponse.status};order:${orderResponse.status};graphql:${graphQlStatus}`;
-    throw new Error(`Shopify lookup failed (${statusSummary})`);
+  const byNameQuery = `
+    query OrderFulfillmentsByName($query: String!) {
+      orders(first: 10, query: $query, sortKey: PROCESSED_AT, reverse: true) {
+        nodes {
+          id
+          name
+          legacyResourceId
+          fulfillments(first: 50) {
+            nodes {
+              id
+              status
+              shipmentStatus
+              createdAt
+              updatedAt
+              trackingInfo {
+                number
+                url
+                company
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const searchQuery = buildOrderLookupQuery(orderNumber);
+  if (!searchQuery) {
+    return {
+      fulfillments: [],
+      reason: "graphql_missing_search_query",
+      debug,
+    };
+  }
+
+  debug.by_name.attempted = true;
+  debug.by_name.query = searchQuery;
+
+  const byNameResult = await shopifyGraphQLRequest(shopDomain, accessToken, byNameQuery, {
+    query: searchQuery,
+  });
+
+  debug.by_name.status = byNameResult.status;
+  debug.by_name.errors = byNameResult.errors.map((error) => String(error?.message || "")).filter(Boolean);
+
+  const nodes = Array.isArray(byNameResult.data?.orders?.nodes) ? byNameResult.data.orders.nodes : [];
+  debug.by_name.candidates = nodes.length;
+
+  const expectedName = normalizeGraphQlOrderName(orderNumber);
+  const selectedOrder =
+    nodes.find((node) => String(node?.legacyResourceId || "") === String(parsedOrderId || "")) ||
+    nodes.find((node) => normalizeGraphQlOrderName(node?.name) === expectedName) ||
+    nodes.find((node) => normalizeGraphQlOrderName(node?.name).includes(expectedName)) ||
+    nodes[0] ||
+    null;
+
+  if (!selectedOrder) {
+    return {
+      fulfillments: [],
+      reason: "graphql_order_not_found",
+      debug,
+    };
+  }
+
+  const fulfillments = Array.isArray(selectedOrder?.fulfillments?.nodes)
+    ? selectedOrder.fulfillments.nodes.map(mapGraphQlFulfillment)
+    : [];
+
+  debug.by_name.order_found = true;
+  debug.by_name.fulfillments = fulfillments.length;
+  debug.by_name.order_gid = String(selectedOrder?.id || "");
+  debug.by_name.order_name = String(selectedOrder?.name || "");
+
+  if (!fulfillments.length) {
+    return {
+      fulfillments: [],
+      reason: "graphql_order_without_fulfillments",
+      debug,
+    };
   }
 
   return {
-    fulfillments: [],
-    reason: graphQlReason || "no_fulfillments_found",
+    fulfillments,
+    reason: "graphql_by_name",
+    debug,
   };
 }
 
@@ -426,6 +558,9 @@ function buildTrackingLookupDebug() {
     resolved: false,
     source: "",
     reason: "",
+    mode: "",
+    by_id: null,
+    by_name: null,
   };
 }
 
@@ -477,9 +612,15 @@ export default async (request) => {
 
       if (trackingLookup.shopify_order_id) {
         try {
-          const fetched = await fetchOrderFulfillmentsFromShopify(trackingLookup.shopify_order_id);
+          const fetched = await fetchOrderFulfillmentsFromShopify(
+            trackingLookup.shopify_order_id,
+            order.order_name
+          );
           trackingLookup.reason = fetched.reason;
           trackingLookup.fulfillments_found = fetched.fulfillments.length;
+          trackingLookup.mode = fetched.debug?.mode || "graphql_only";
+          trackingLookup.by_id = fetched.debug?.by_id || null;
+          trackingLookup.by_name = fetched.debug?.by_name || null;
 
           const resolved = selectTrackingFromFulfillments(fetched.fulfillments, order.fulfillment_number);
           if (resolved.tracking_url) {

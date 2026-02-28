@@ -6,6 +6,7 @@ const foraneoFulfilledScreen = document.getElementById("foraneoFulfilledScreen")
 const localFulfilledScreen = document.getElementById("localFulfilledScreen");
 const foraneoFulfilledTrackingLabel = document.getElementById("foraneoFulfilledTrackingLabel");
 const foraneoFulfilledTrackingNumber = document.getElementById("foraneoFulfilledTrackingNumber");
+const foraneoFulfilledTrackingBtn = document.getElementById("foraneoFulfilledTrackingBtn");
 const localFulfilledTrackingLabel = document.getElementById("localFulfilledTrackingLabel");
 const localFulfilledTrackingNumber = document.getElementById("localFulfilledTrackingNumber");
 const localFulfilledTrackingBtn = document.getElementById("localFulfilledTrackingBtn");
@@ -175,6 +176,7 @@ function showForaneoPreparingScreen() {
 
 function showForaneoFulfilledScreen(order) {
   const trackingNumber = String(order?.fulfillment_number || "").trim();
+  const trackingUrl = normalizeTrackingUrl(order?.tracking_url);
 
   if (foraneoFulfilledTrackingLabel) {
     foraneoFulfilledTrackingLabel.hidden = !trackingNumber;
@@ -187,6 +189,16 @@ function showForaneoFulfilledScreen(order) {
     } else {
       foraneoFulfilledTrackingNumber.textContent = "";
       foraneoFulfilledTrackingNumber.hidden = true;
+    }
+  }
+
+  if (foraneoFulfilledTrackingBtn) {
+    if (trackingUrl) {
+      foraneoFulfilledTrackingBtn.dataset.url = trackingUrl;
+      foraneoFulfilledTrackingBtn.hidden = false;
+    } else {
+      foraneoFulfilledTrackingBtn.dataset.url = "";
+      foraneoFulfilledTrackingBtn.hidden = true;
     }
   }
 
@@ -399,6 +411,18 @@ if (foraneoFulfilledTrackingNumber) {
     } else {
       showToast("No se pudo copiar el número.");
     }
+  });
+}
+
+if (foraneoFulfilledTrackingBtn) {
+  foraneoFulfilledTrackingBtn.addEventListener("click", () => {
+    const url = foraneoFulfilledTrackingBtn.dataset.url || "";
+    if (!url) {
+      showToast("Aún no tenemos un link de rastreo para este pedido.");
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
   });
 }
 

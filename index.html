@@ -145,7 +145,7 @@
     </main>
 
     <main id="foraneoFulfilledScreen" class="status-page foraneo-fulfilled-page" hidden>
-      <section class="status-shell">
+      <section class="status-shell status-shell--with-actions">
         <div class="status-progress" style="--progress: 100" aria-hidden="true">
           <span class="status-progress__track">
             <span class="status-progress__fill"></span>
@@ -168,6 +168,12 @@
             hidden
             aria-label="Copiar número de rastreo"
           ></button>
+        </div>
+
+        <div class="status-actions">
+          <button id="foraneoFulfilledTrackingBtn" class="status-cta" type="button" hidden>
+            ABRIR LINK DE RASTREO
+          </button>
         </div>
       </section>
     </main>

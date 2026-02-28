@@ -4,9 +4,12 @@ const orderInput = document.getElementById("orderInput");
 const searchOrderBtn = document.getElementById("searchOrderBtn");
 const toastRegion = document.getElementById("toastRegion");
 
+const LOOKUP_ENDPOINT = "/.netlify/functions/order-lookup";
+
 let phoneDigits = "";
 let orderDigits = "";
 let lastToast = { message: "", time: 0 };
+let isSubmitting = false;
 
 function formatPhone(digits) {
   if (digits.length <= 2) return digits;
@@ -23,7 +26,15 @@ function isOrderValid() {
 }
 
 function updateButtonState() {
-  searchOrderBtn.disabled = !(isPhoneValid() && isOrderValid());
+  searchOrderBtn.disabled = isSubmitting || !(isPhoneValid() && isOrderValid());
+}
+
+function setSubmittingState(value) {
+  isSubmitting = value;
+  phoneInput.disabled = value;
+  orderInput.disabled = value;
+  searchOrderBtn.textContent = value ? "BUSCANDO..." : "BUSCAR PEDIDO";
+  updateButtonState();
 }
 
 function showToast(message) {
@@ -63,6 +74,24 @@ function validateOrderWithToast() {
     return false;
   }
   return true;
+}
+
+async function lookupOrder(payload) {
+  const response = await fetch(LOOKUP_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "No se pudo consultar el pedido.");
+  }
+
+  return data;
 }
 
 phoneInput.addEventListener("input", (event) => {
@@ -120,7 +149,7 @@ orderInput.addEventListener("keydown", (event) => {
   }
 });
 
-trackingForm.addEventListener("submit", (event) => {
+trackingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!validatePhoneWithToast()) {
@@ -133,14 +162,28 @@ trackingForm.addEventListener("submit", (event) => {
     return;
   }
 
-  showToast("Datos listos. Siguiente paso: conectar búsqueda de pedido.");
-
   const payload = {
     phone: phoneDigits,
     orderNumber: orderInput.value,
   };
 
-  console.log("Tracking form valid:", payload);
+  try {
+    setSubmittingState(true);
+    const result = await lookupOrder(payload);
+
+    if (!result.found) {
+      showToast("No encontramos un pedido con esos datos.");
+      return;
+    }
+
+    sessionStorage.setItem("stashx_last_order_lookup", JSON.stringify(result.order));
+    showToast("Pedido encontrado. Continuamos con la siguiente pantalla.");
+    console.log("Order lookup result:", result.order);
+  } catch (error) {
+    showToast(error.message || "Ocurrió un error al buscar el pedido.");
+  } finally {
+    setSubmittingState(false);
+  }
 });
 
 window.addEventListener("load", () => {

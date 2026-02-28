@@ -266,6 +266,16 @@ body {
   letter-spacing: 0.003em;
 }
 
+.status-text strong {
+  font-weight: 700;
+}
+
+.status-text-italic {
+  display: block;
+  margin-top: 2px;
+  font-style: italic;
+}
+
 .status-schedule {
   margin-top: 10px;
 }

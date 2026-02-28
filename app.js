@@ -1,6 +1,7 @@
 const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
 const localPreparingScreen = document.getElementById("localPreparingScreen");
+const foraneoPreparingScreen = document.getElementById("foraneoPreparingScreen");
 const localFulfilledScreen = document.getElementById("localFulfilledScreen");
 const localFulfilledTrackingLabel = document.getElementById("localFulfilledTrackingLabel");
 const localFulfilledTrackingNumber = document.getElementById("localFulfilledTrackingNumber");
@@ -21,7 +22,12 @@ let orderDigits = "";
 let lastToast = { message: "", time: 0 };
 let isSubmitting = false;
 
-const statusScreens = [pendingScreen, localPreparingScreen, localFulfilledScreen].filter(Boolean);
+const statusScreens = [
+  pendingScreen,
+  localPreparingScreen,
+  foraneoPreparingScreen,
+  localFulfilledScreen,
+].filter(Boolean);
 
 function formatPhone(digits) {
   if (digits.length <= 2) return digits;
@@ -159,6 +165,10 @@ function showLocalPreparingScreen() {
   showStatusScreen(localPreparingScreen);
 }
 
+function showForaneoPreparingScreen() {
+  showStatusScreen(foraneoPreparingScreen);
+}
+
 async function copyTextToClipboard(text) {
   const value = String(text || "").trim();
   if (!value) return false;
@@ -242,6 +252,10 @@ function showLocalFulfilledScreen(order) {
 
 function hasLocalTag(tags) {
   return String(tags || "").toLowerCase().includes("local");
+}
+
+function hasForaneoTag(tags) {
+  return String(tags || "").toLowerCase().includes("foraneo");
 }
 
 function isLocalFulfilledStatus(status) {
@@ -389,6 +403,11 @@ trackingForm.addEventListener("submit", async (event) => {
       } else {
         showLocalPreparingScreen();
       }
+      return;
+    }
+
+    if (hasForaneoTag(result.order.tags) && !isLocalFulfilledStatus(fulfillmentStatus)) {
+      showForaneoPreparingScreen();
       return;
     }
 

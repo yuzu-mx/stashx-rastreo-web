@@ -173,54 +173,31 @@ body {
   width: min(100%, 393px);
   margin: 0 auto;
   min-height: 100vh;
-  background: #ffffff;
+  background: #ffffff url("assets/payment-pending.svg") top center / 100% 100% no-repeat;
 }
 
-.pending-artboard {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.pending-progress {
+.pending-top-loader {
   position: absolute;
-  top: 92px;
-  left: 30px;
-  right: 30px;
+  top: 137px;
+  left: 49px;
+  width: 223px;
+  height: 20px;
+  border-radius: 999px;
+  background: #f0d8bd;
   z-index: 4;
-  padding-top: 2px;
-  background: #ffffff;
   pointer-events: none;
 }
 
-.pending-progress-track {
-  width: 100%;
-  height: 7px;
-  border-radius: 999px;
-  background: #e7e7e7;
-  overflow: hidden;
-}
-
-.pending-progress-fill {
+.pending-top-loader-fill {
   width: 0;
   height: 100%;
   border-radius: 999px;
-  background: #223601;
+  background: #f75f05;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.35);
 }
 
-.pending-progress-value {
-  margin: 8px 0 0;
-  font-family: "Inclusive Sans", sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-  color: #223601;
-}
-
-.pending-page.is-animating .pending-progress-fill {
-  animation: pending-progress-fill 1000ms ease-out forwards;
+.pending-page.is-animating .pending-top-loader-fill {
+  animation: pending-top-loader-grow 1000ms ease-out forwards;
 }
 
 .pending-gradient-mask {
@@ -228,7 +205,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 62%;
+  height: 64%;
   background: #ffffff;
   transform-origin: top;
   z-index: 3;
@@ -283,12 +260,12 @@ body {
   }
 }
 
-@keyframes pending-progress-fill {
+@keyframes pending-top-loader-grow {
   from {
     width: 0;
   }
   to {
-    width: 10%;
+    width: 12%;
   }
 }
 

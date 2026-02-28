@@ -1,6 +1,5 @@
 const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
-const pendingProgressValue = document.getElementById("pendingProgressValue");
 const trackingForm = document.getElementById("trackingForm");
 const phoneInput = document.getElementById("phoneInput");
 const orderInput = document.getElementById("orderInput");
@@ -13,7 +12,6 @@ let phoneDigits = "";
 let orderDigits = "";
 let lastToast = { message: "", time: 0 };
 let isSubmitting = false;
-let pendingProgressRaf = null;
 
 function formatPhone(digits) {
   if (digits.length <= 2) return digits;
@@ -80,41 +78,12 @@ function validateOrderWithToast() {
   return true;
 }
 
-function animatePendingProgressValue(target = 10, durationMs = 1000) {
-  if (!pendingProgressValue) return;
-  if (pendingProgressRaf) {
-    cancelAnimationFrame(pendingProgressRaf);
-    pendingProgressRaf = null;
-  }
-
-  pendingProgressValue.textContent = "0%";
-  const start = performance.now();
-
-  const tick = (now) => {
-    const elapsed = now - start;
-    const progress = Math.min(elapsed / durationMs, 1);
-    const value = Math.round(target * progress);
-    pendingProgressValue.textContent = `${value}%`;
-
-    if (progress < 1) {
-      pendingProgressRaf = requestAnimationFrame(tick);
-      return;
-    }
-
-    pendingProgressValue.textContent = `${target}%`;
-    pendingProgressRaf = null;
-  };
-
-  pendingProgressRaf = requestAnimationFrame(tick);
-}
-
 function showPendingScreen() {
   lookupScreen.hidden = true;
   pendingScreen.hidden = false;
   pendingScreen.classList.remove("is-animating");
   void pendingScreen.offsetWidth;
   pendingScreen.classList.add("is-animating");
-  animatePendingProgressValue(10, 1000);
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 

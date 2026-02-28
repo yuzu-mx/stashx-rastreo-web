@@ -20,6 +20,7 @@ const LOOKUP_ENDPOINT = "/.netlify/functions/order-lookup";
 const ORDER_PREFIX = "ST-";
 const ORDER_MIN_DIGITS = 3;
 const ORDER_MAX_DIGITS = 9;
+const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
 
 let phoneDigits = "";
 let orderDigits = "";
@@ -451,6 +452,14 @@ trackingForm.addEventListener("submit", async (event) => {
     if (!result.found) {
       showToast("No encontramos un pedido con esos datos.");
       return;
+    }
+
+    if (result?.order?.tracking_lookup) {
+      console.info("[tracking_lookup]", result.order.tracking_lookup);
+      if (DEBUG_MODE) {
+        const reason = String(result.order.tracking_lookup.reason || "sin_reporte");
+        showToast(`Tracking debug: ${reason}`);
+      }
     }
 
     sessionStorage.setItem("stashx_last_order_lookup", JSON.stringify(result.order));

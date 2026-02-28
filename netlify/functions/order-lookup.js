@@ -337,8 +337,7 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
         id
         name
         legacyResourceId
-        fulfillments(first: 50) {
-          nodes {
+        fulfillments {
             id
             status
             shipmentStatus
@@ -349,7 +348,6 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
               url
               company
             }
-          }
         }
       }
     }
@@ -367,9 +365,12 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
 
     const byIdOrder = byIdResult.data?.order || null;
     if (byIdOrder) {
-      const fulfillments = Array.isArray(byIdOrder?.fulfillments?.nodes)
-        ? byIdOrder.fulfillments.nodes.map(mapGraphQlFulfillment)
-        : [];
+      const fulfillmentNodes = Array.isArray(byIdOrder?.fulfillments)
+        ? byIdOrder.fulfillments
+        : Array.isArray(byIdOrder?.fulfillments?.nodes)
+          ? byIdOrder.fulfillments.nodes
+          : [];
+      const fulfillments = fulfillmentNodes.map(mapGraphQlFulfillment);
       debug.by_id.order_found = true;
       debug.by_id.fulfillments = fulfillments.length;
       debug.by_id.order_gid = String(byIdOrder?.id || "");
@@ -392,8 +393,7 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
           id
           name
           legacyResourceId
-          fulfillments(first: 50) {
-            nodes {
+          fulfillments {
               id
               status
               shipmentStatus
@@ -404,7 +404,6 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
                 url
                 company
               }
-            }
           }
         }
       }
@@ -449,9 +448,12 @@ async function fetchOrderFulfillmentsFromShopify(shopifyOrderId, orderNumber) {
     };
   }
 
-  const fulfillments = Array.isArray(selectedOrder?.fulfillments?.nodes)
-    ? selectedOrder.fulfillments.nodes.map(mapGraphQlFulfillment)
-    : [];
+  const selectedFulfillmentNodes = Array.isArray(selectedOrder?.fulfillments)
+    ? selectedOrder.fulfillments
+    : Array.isArray(selectedOrder?.fulfillments?.nodes)
+      ? selectedOrder.fulfillments.nodes
+      : [];
+  const fulfillments = selectedFulfillmentNodes.map(mapGraphQlFulfillment);
 
   debug.by_name.order_found = true;
   debug.by_name.fulfillments = fulfillments.length;

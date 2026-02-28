@@ -1,10 +1,8 @@
 const lookupScreen = document.getElementById("lookupScreen");
 const pendingScreen = document.getElementById("pendingScreen");
-const pendingArtboard = document.querySelector(".pending-artboard");
 const localPreparingScreen = document.getElementById("localPreparingScreen");
-const localPreparingArtboard = document.querySelector(".local-preparing-artboard");
 const localFulfilledScreen = document.getElementById("localFulfilledScreen");
-const localFulfilledArtboard = document.querySelector(".local-fulfilled-artboard");
+const localFulfilledTrackingLabel = document.getElementById("localFulfilledTrackingLabel");
 const localFulfilledTrackingNumber = document.getElementById("localFulfilledTrackingNumber");
 const localFulfilledTrackingBtn = document.getElementById("localFulfilledTrackingBtn");
 const trackingForm = document.getElementById("trackingForm");
@@ -117,19 +115,9 @@ function validateOrderWithToast() {
   return true;
 }
 
-function refreshArtboardAnimation(artboard) {
-  if (!artboard) return;
-
-  const currentSrc = artboard.getAttribute("src") || "";
-  const baseSrc = artboard.dataset.baseSrc || currentSrc.split("?")[0];
-  artboard.dataset.baseSrc = baseSrc;
-  artboard.setAttribute("src", `${baseSrc}?v=${Date.now()}`);
-}
-
-function showStatusScreen(screen, artboard) {
+function showStatusScreen(screen) {
   if (!screen) return;
 
-  refreshArtboardAnimation(artboard);
   lookupScreen.hidden = true;
 
   statusScreens.forEach((statusScreen) => {
@@ -146,11 +134,11 @@ function showStatusScreen(screen, artboard) {
 }
 
 function showPendingScreen() {
-  showStatusScreen(pendingScreen, pendingArtboard);
+  showStatusScreen(pendingScreen);
 }
 
 function showLocalPreparingScreen() {
-  showStatusScreen(localPreparingScreen, localPreparingArtboard);
+  showStatusScreen(localPreparingScreen);
 }
 
 async function copyTextToClipboard(text) {
@@ -207,6 +195,10 @@ function showLocalFulfilledScreen(order) {
   const trackingNumber = String(order?.fulfillment_number || "").trim();
   const trackingUrl = normalizeTrackingUrl(order?.tracking_url);
 
+  if (localFulfilledTrackingLabel) {
+    localFulfilledTrackingLabel.hidden = !trackingNumber;
+  }
+
   if (localFulfilledTrackingNumber) {
     if (trackingNumber) {
       localFulfilledTrackingNumber.textContent = trackingNumber;
@@ -227,7 +219,7 @@ function showLocalFulfilledScreen(order) {
     }
   }
 
-  showStatusScreen(localFulfilledScreen, localFulfilledArtboard);
+  showStatusScreen(localFulfilledScreen);
 }
 
 function hasLocalTag(tags) {

@@ -61,40 +61,91 @@
     </main>
 
     <main id="pendingScreen" class="status-page pending-page" hidden>
-      <img
-        class="status-artboard pending-artboard"
-        src="assets/payment-pending-content.svg"
-        alt="Tu pedido está pendiente de pago"
-      />
+      <section class="status-shell">
+        <div class="status-progress" style="--progress: 10" aria-hidden="true">
+          <span class="status-progress__track">
+            <span class="status-progress__fill"></span>
+          </span>
+        </div>
+
+        <div class="status-copy">
+          <h1 class="status-title">Pedido pendiente de pago</h1>
+          <p class="status-text">Tu pedido aún está pendiente de pago.</p>
+          <p class="status-text">
+            Para que se procese correctamente, completa el pago mediante transferencia, en tienda de
+            autoservicio o usando la opción que seleccionaste en Mercado Pago.
+          </p>
+          <p class="status-text">
+            Si ya realizaste el pago, considera que el sistema puede tardar hasta 24 horas en
+            actualizar el estado a “Pagado”.
+          </p>
+        </div>
+      </section>
     </main>
 
     <main id="localPreparingScreen" class="status-page local-preparing-page" hidden>
-      <img
-        class="status-artboard local-preparing-artboard"
-        src="assets/local-preparing-content.svg"
-        alt="Tu pedido local está en preparación"
-      />
+      <section class="status-shell">
+        <div class="status-progress" style="--progress: 70" aria-hidden="true">
+          <span class="status-progress__track">
+            <span class="status-progress__fill"></span>
+          </span>
+        </div>
+
+        <div class="status-copy">
+          <h1 class="status-title">Pedido en preparación</h1>
+          <p class="status-text">
+            Nuestro equipo ya está preparando tu pedido.<br />
+            Te notificaremos por WhatsApp o email en cuanto salga a ruta.
+          </p>
+          <p class="status-text">
+            Te pedimos un poco de paciencia: los envíos se despachan junto con otros paquetes dentro
+            de la misma ruta.
+          </p>
+          <p class="status-text">
+            Cuando tu pedido esté en camino, te compartiremos el link de rastreo en tiempo real para
+            que puedas seguirlo.
+          </p>
+
+          <div class="status-schedule">
+            <p class="status-schedule-title">Horarios de Same-day</p>
+            <p class="status-schedule-row"><strong>Lunes a Viernes:</strong> 10 am a 7 pm</p>
+            <p class="status-schedule-row"><strong>Sábados y Domingos:</strong> 10 am a 4 pm</p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <main id="localFulfilledScreen" class="status-page local-fulfilled-page" hidden>
-      <img
-        class="status-artboard local-fulfilled-artboard"
-        src="assets/local-fulfilled-base.svg"
-        alt="Tu pedido local está preparado y por salir a ruta"
-      />
+      <section class="status-shell status-shell--with-actions">
+        <div class="status-progress" style="--progress: 100" aria-hidden="true">
+          <span class="status-progress__track">
+            <span class="status-progress__fill"></span>
+          </span>
+        </div>
 
-      <div class="local-fulfilled-overlay">
-        <button
-          id="localFulfilledTrackingNumber"
-          class="local-fulfilled-tracking-number"
-          type="button"
-          hidden
-          aria-label="Copiar número de rastreo"
-        ></button>
-        <button id="localFulfilledTrackingBtn" class="local-fulfilled-track-btn" type="button" hidden>
-          ABRIR LINK DE RASTREO
-        </button>
-      </div>
+        <div class="status-copy">
+          <h1 class="status-title">Pedido preparado y por salir a ruta</h1>
+          <p class="status-text">
+            Nuestro equipo ya preparó tu pedido y está por salir a ruta. Puedes abrir el link de
+            rastreo para tener un seguimiento en tiempo real de tu pedido
+          </p>
+
+          <p id="localFulfilledTrackingLabel" class="status-label" hidden>Número de rastreo:</p>
+          <button
+            id="localFulfilledTrackingNumber"
+            class="status-tracking-number"
+            type="button"
+            hidden
+            aria-label="Copiar número de rastreo"
+          ></button>
+        </div>
+
+        <div class="status-actions">
+          <button id="localFulfilledTrackingBtn" class="status-cta" type="button" hidden>
+            ABRIR LINK DE RASTREO
+          </button>
+        </div>
+      </section>
     </main>
 
     <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>

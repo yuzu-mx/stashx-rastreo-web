@@ -95,14 +95,17 @@ function prefillFromUrlParams() {
 }
 
 function updateButtonState() {
+  if (!searchOrderBtn) return;
   searchOrderBtn.disabled = isSubmitting || !(isPhoneValid() && isOrderValid());
 }
 
 function setSubmittingState(value) {
   isSubmitting = value;
-  phoneInput.disabled = value;
-  orderInput.disabled = value;
-  searchOrderBtn.textContent = value ? "BUSCANDO..." : "BUSCAR PEDIDO";
+  if (phoneInput) phoneInput.disabled = value;
+  if (orderInput) orderInput.disabled = value;
+  if (searchOrderBtn) {
+    searchOrderBtn.textContent = value ? "BUSCANDO..." : "BUSCAR PEDIDO";
+  }
   updateButtonState();
 }
 
@@ -117,6 +120,7 @@ function showToast(message) {
   const toast = document.createElement("p");
   toast.className = "toast";
   toast.textContent = message;
+  if (!toastRegion) return;
   toastRegion.appendChild(toast);
 
   setTimeout(() => {
@@ -318,55 +322,74 @@ async function lookupOrder(payload) {
   return data;
 }
 
-phoneInput.addEventListener("input", (event) => {
+function safePersistLastLookup(order) {
+  try {
+    sessionStorage.setItem("stashx_last_order_lookup", JSON.stringify(order));
+  } catch (error) {
+    console.warn("No se pudo guardar stashx_last_order_lookup en sessionStorage", error);
+  }
+}
+
+function submitTrackingLookupForm() {
+  if (!validatePhoneWithToast()) {
+    if (phoneInput) phoneInput.focus();
+    return;
+  }
+
+  if (!validateOrderWithToast()) {
+    if (orderInput) orderInput.focus();
+    return;
+  }
+
+  if (trackingForm && typeof trackingForm.requestSubmit === "function") {
+    trackingForm.requestSubmit();
+    return;
+  }
+
+  trackingForm?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+}
+
+phoneInput?.addEventListener("input", (event) => {
   applyPhoneValue(event.target.value);
   updateButtonState();
 });
 
-phoneInput.addEventListener("keydown", (event) => {
+phoneInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
 
   event.preventDefault();
   if (validatePhoneWithToast()) {
-    orderInput.focus();
+    orderInput?.focus();
   }
 });
 
-phoneInput.addEventListener("blur", () => {
+phoneInput?.addEventListener("blur", () => {
   if (phoneDigits.length > 0 && !isPhoneValid()) {
     validatePhoneWithToast();
   }
 });
 
-orderInput.addEventListener("input", (event) => {
+orderInput?.addEventListener("input", (event) => {
   applyOrderValue(event.target.value);
   placeCursorAtOrderEnd();
   updateButtonState();
 });
 
-orderInput.addEventListener("blur", () => {
+orderInput?.addEventListener("blur", () => {
   if (orderDigits.length > 0 && !isOrderValid()) {
     validateOrderWithToast();
   }
 });
 
-orderInput.addEventListener("focus", () => {
+orderInput?.addEventListener("focus", () => {
   applyOrderValue(orderInput.value);
   placeCursorAtOrderEnd();
 });
 
-orderInput.addEventListener("keydown", (event) => {
+orderInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
-
   event.preventDefault();
-  if (!validatePhoneWithToast()) {
-    phoneInput.focus();
-    return;
-  }
-
-  if (validateOrderWithToast()) {
-    trackingForm.requestSubmit();
-  }
+  submitTrackingLookupForm();
 });
 
 if (localFulfilledTrackingBtn) {
@@ -427,7 +450,7 @@ if (foraneoFulfilledTrackingBtn) {
   });
 }
 
-trackingForm.addEventListener("submit", async (event) => {
+trackingForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!validatePhoneWithToast()) {
@@ -462,7 +485,7 @@ trackingForm.addEventListener("submit", async (event) => {
       }
     }
 
-    sessionStorage.setItem("stashx_last_order_lookup", JSON.stringify(result.order));
+    safePersistLastLookup(result.order);
 
     const financialStatus = String(result.order.financial_status || "").toLowerCase();
     if (financialStatus !== "paid") {
@@ -497,11 +520,17 @@ trackingForm.addEventListener("submit", async (event) => {
   }
 });
 
+searchOrderBtn?.addEventListener("click", (event) => {
+  event.preventDefault();
+  if (isSubmitting || searchOrderBtn.disabled) return;
+  submitTrackingLookupForm();
+});
+
 prefillFromUrlParams();
 updateButtonState();
 
 window.addEventListener("load", () => {
-  if (phoneInput.value.length === 0) {
+  if (phoneInput && phoneInput.value.length === 0) {
     phoneInput.focus();
   }
 });

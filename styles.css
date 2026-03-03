@@ -89,6 +89,13 @@ body {
   margin-bottom: 12px;
 }
 
+.tracking-page .back-link--lookup {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+}
+
 .brand-wrap {
   margin-bottom: 54px;
 }

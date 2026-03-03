@@ -72,6 +72,23 @@ body {
   padding: 30px 30px 24px;
 }
 
+.back-link {
+  display: inline-block;
+  width: fit-content;
+  color: var(--olive-900);
+  font-family: "Inclusive Sans", sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.tracking-page .back-link {
+  margin-bottom: 12px;
+}
+
 .brand-wrap {
   margin-bottom: 54px;
 }
@@ -210,6 +227,10 @@ body {
   padding: 60px 30px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
+}
+
+.status-shell .back-link {
+  margin-bottom: 18px;
 }
 
 .status-shell--with-actions {

@@ -15,6 +15,7 @@ const phoneInput = document.getElementById("phoneInput");
 const orderInput = document.getElementById("orderInput");
 const searchOrderBtn = document.getElementById("searchOrderBtn");
 const toastRegion = document.getElementById("toastRegion");
+const backLinks = document.querySelectorAll("[data-back-link]");
 
 const LOOKUP_ENDPOINT = "/.netlify/functions/order-lookup";
 const ORDER_PREFIX = "ST-";
@@ -131,6 +132,15 @@ function showToast(message) {
   setTimeout(() => {
     toast.remove();
   }, 2500);
+}
+
+function goBackOrHome() {
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+
+  window.location.href = "/";
 }
 
 function validatePhoneWithToast() {
@@ -524,6 +534,13 @@ searchOrderBtn?.addEventListener("click", (event) => {
   event.preventDefault();
   if (isSubmitting || searchOrderBtn.disabled) return;
   submitTrackingLookupForm();
+});
+
+backLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    goBackOrHome();
+  });
 });
 
 prefillFromUrlParams();
